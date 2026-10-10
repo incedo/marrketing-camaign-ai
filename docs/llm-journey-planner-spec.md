@@ -148,13 +148,12 @@ Any failure → counted as a validation problem → retry loop (§4.5).
 
 ## 7. Guardrails
 
-- **PII:** `profile.name` is sent to the LLM for copy personalization. Add a
-  `pseudonymize: Boolean` flag on `PlannerInput`; when true, replace the name with
-  "the customer" (copy still works, just less personal).
-- **Cost/latency:** LLM planning is opt-in per customer, not the default path.
-  Suggested router (v1): rule-based engine for everyone; `LlmJourneyPlanner` for
-  high-value or ambiguous customers (e.g. `totalSpendCents90d` above threshold OR
-  conflicting signals). Revisit once costs are measured.
+- **PII:** never send PII to a cloud LLM. The planner takes `LlmTarget` (`CLOUD | LOCAL`):
+  on `CLOUD`, pseudonymize by default — the name becomes "the customer" and PII-bearing
+  attributes are dropped before prompt building. On `LOCAL`, full profile data may be used.
+- **Cost/latency:** the router (§11.1) sends high-propensity customers to the LLM
+  planner for real-time journey building; everyone else gets the rule-based engine.
+  Revisit the threshold once costs are measured.
 - **Determinism:** temperature 0, fixed `nowEpochMillis` in tests, golden tests (§8).
 
 ## 8. Testing
@@ -181,18 +180,35 @@ shaped for it now so nothing has to be re-cut later.
 
 **New files (commonMain):**
 - `PlannerInput.kt` — `PlannerInput`, `Campaign`, `CampaignConstraints`,
-  `ArchetypePerformance`
-- `BehaviorSummary.kt` — `BehaviorSummary`, `Trend`, `summarize(MeasuredBehavior, now)`
-- `LlmJourneyPlanner.kt` — prompt building, JSON parsing, retry loop, fallback wiring
+  `ArchetypePerformance`, `LlmTarget`
+- `BehaviorSummary.kt` — `BehaviorSummary`, `Trend`, `summarize(MeasuredBehavior, now)`,
+  `propensityScore(BehaviorSummary): Double`
+- `JourneyOutcome.kt` — `JourneyOutcome`, the executing service's return type (§11.2)
+- `LlmJourneyPlanner.kt` — prompt building, JSON parsing, retry loop, fallback wiring;
+  applies pseudonymization when `target == CLOUD`
+- `JourneyRouter.kt` — picks planner vs rule-based engine by propensity threshold (§11.1)
 
 **Changed:**
 - `LlmJourneyEngine` stays untouched as the fallback.
+- `PersonProfile` gains `language: String?` (per-profile copy language, §11.4).
 
 **Tests (commonTest):** planner loop tests + golden tests (§8).
 
-## 11. Open questions
+## 11. Decisions (Kees, 2026-10-10)
 
-1. Router rules for "who gets LLM planning" — spend threshold? manual flag?
-2. Where do journey outcomes get logged (needs a store for §9)?
-3. PII policy: is sending names to the LLM provider acceptable, or pseudonymize by default?
-4. Copy language default: `nl` per constraints, or per-profile?
+1. **Router:** customers with a high propensity to buy get the LLM planner with
+   real-time journey building; everyone else gets the rule-based engine (no
+   real-time journey building needed for them). Propensity is scored **in code**
+   from `BehaviorSummary` (recency, frequency, spend) as a 0..1 score; the planner
+   runs when score ≥ threshold (default 0.7, configurable).
+2. **Outcome store:** the journey outcome is the return value of the executing service.
+   Define `JourneyOutcome(journeyId, archetype, segment, nodePath, converted, atEpochMillis)`
+   as that return type; an append store collects the returns and the §9 aggregation
+   reads from it. No separate analytics pipeline.
+3. **PII:** the PII policy decides cloud vs local LLM. New `LlmTarget` = `CLOUD | LOCAL`
+   on the planner config. On `CLOUD`, pseudonymize by default (name → "the customer",
+   PII-bearing attributes dropped before prompt building) — PII never goes to a cloud
+   provider. On `LOCAL`, full profile data is fine.
+4. **Copy language:** per-profile, since many customers are English-speaking. Add
+   `language: String?` to `PersonProfile`; effective language =
+   `profile.language ?: campaign.constraints.language` (default `"nl"`).
