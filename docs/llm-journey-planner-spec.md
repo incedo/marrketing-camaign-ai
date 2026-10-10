@@ -1,6 +1,6 @@
 # Spec: LLM Journey Planner
 
-**Status:** draft · **Date:** 2026-10-10 · **Author:** Mr I (with Kees)
+**Status:** implemented 2026-10-10 (§3.4 subscriptions deferred) · **Date:** 2026-10-10 · **Author:** Mr I (with Kees)
 
 ## 1. Goal
 
@@ -122,6 +122,9 @@ engine → build the internal `PlannerInput` → run the §4 loop. Planner confi
 > kotlinx polymorphic serialization on the sealed `JourneyNode` interface.
 
 ### 3.4 Product is abstract — subscriptions are first-class
+
+> **Status (2026-10-10): deferred.** Kees is not sure about this modeling yet — build
+> the working planner first, revisit after. The notes below are a proposal, not decided.
 
 "Product" is an abstract term: it covers physical goods, digital goods, services
 **and subscriptions** (media, fitness, …). The `ProductType` enum already abstracts

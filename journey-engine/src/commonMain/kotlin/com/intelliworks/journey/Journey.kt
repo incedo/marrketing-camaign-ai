@@ -1,23 +1,31 @@
 package com.intelliworks.journey
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 enum class Channel { EMAIL, PUSH, SMS, IN_APP }
 
-/** A single step in a marketing journey. */
+/** A single step in a marketing journey. Serialized polymorphically for the external runtime. */
+@Serializable
 sealed interface JourneyNode {
     val id: String
 }
 
+@Serializable
+@SerialName("start")
 data class StartNode(override val id: String = "start") : JourneyNode
 
+@Serializable
+@SerialName("end")
 data class EndNode(
     override val id: String,
     val outcome: String = "completed",
 ) : JourneyNode
 
 /** Pause the journey until [eventType] happens; go to [onTimeoutNodeId] after [timeoutHours]. */
+@Serializable
+@SerialName("waitOnEvent")
 data class WaitOnEventNode(
     override val id: String,
     val eventType: String,
@@ -27,6 +35,8 @@ data class WaitOnEventNode(
 ) : JourneyNode
 
 /** Branch on a yes/no question evaluated at runtime. */
+@Serializable
+@SerialName("decision")
 data class DecisionNode(
     override val id: String,
     val question: String,
@@ -35,6 +45,8 @@ data class DecisionNode(
 ) : JourneyNode
 
 /** Split traffic  [splitPercentA] / (100 - [splitPercentA]) over two variants. */
+@Serializable
+@SerialName("abTest")
 data class ABTestNode(
     override val id: String,
     val name: String,
@@ -44,6 +56,8 @@ data class ABTestNode(
 ) : JourneyNode
 
 /** Send one marketing message, then continue at [nextNodeId]. */
+@Serializable
+@SerialName("marketing")
 data class MarketingNode(
     override val id: String,
     val channel: Channel,
@@ -52,8 +66,10 @@ data class MarketingNode(
     val nextNodeId: String,
 ) : JourneyNode
 
+@Serializable
 data class JourneyEdge(val from: String, val to: String, val label: String? = null)
 
+@Serializable
 data class Journey(
     val nodes: Map<String, JourneyNode>,
     val edges: List<JourneyEdge>,

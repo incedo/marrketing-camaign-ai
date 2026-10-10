@@ -8,6 +8,8 @@ data class PersonProfile(
     val name: String? = null,
     val attributes: Map<String, String> = emptyMap(),
     val segments: Set<String> = emptySet(),
+    /** Preferred copy language, e.g. "nl" or "en". Falls back to campaign default. */
+    val language: String? = null,
 )
 
 @Serializable
