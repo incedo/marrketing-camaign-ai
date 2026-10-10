@@ -15,7 +15,7 @@ data class PlannerInput(
     val nowEpochMillis: Long,
 )
 
-private val PII_ATTRIBUTE_KEYS = setOf(
+internal val PII_ATTRIBUTE_KEYS = setOf(
     "email", "phone", "address", "fullname", "name", "dob", "birthdate", "bsn",
 )
 
