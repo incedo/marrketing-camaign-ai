@@ -13,6 +13,23 @@ with no evidence, behavior is exactly today's (static threshold + rule fallback)
 
 Out of scope: model training / fine-tuning. This spec is prompting + statistics only.
 
+### Boundary: module vs runtime
+
+We do journey-making (planning + advice), not the runtime. The learning loop
+splits accordingly:
+
+| Ours (this module) | Runtime's (external) |
+|---|---|
+| `JourneyOutcome` data contract | Produces outcomes from execution |
+| `OutcomeStore` interface | Storage implementation (append/read) |
+| Pure `aggregateOutcomes()` function | Schedules the nightly/weekly job, calls it |
+| `ArbitrationPolicy` (bandit logic) | Feeds evidence rows back into `PlanRequest` |
+| Governance validation rules | — |
+| Prompt arbitration context | — |
+
+Nothing in this spec tells the runtime how to store or schedule; we define the
+contract and the pure logic, they wire it into execution.
+
 ## 2. Outcome logging
 
 The executing service already returns `JourneyOutcome` (§11.2). The module adds an
@@ -44,7 +61,22 @@ to individuals (minimum cohort sizes, §3.3).
 
 ## 3. Aggregation → ArchetypePerformance
 
-A scheduled job (nightly/weekly, hosted by the runtime) folds outcomes into evidence:
+Aggregation is a pure function in `commonMain` — no I/O, no scheduling. The
+runtime's nightly/weekly job reads its `OutcomeStore` and calls this function;
+the rows go back in as `PlanRequest.segmentPerformance` (existing slot).
+
+```kotlin
+fun aggregateOutcomes(
+    outcomes: List<JourneyOutcome>,
+    config: AggregationConfig = AggregationConfig(),
+    nowEpochMillis: Long,
+): List<ArchetypePerformance>
+
+data class AggregationConfig(
+    val minSamples: Long = 30,
+    val recencyHalfLifeDays: Int = 45,
+    val windowDays: Int = 90,
+)
 
 ```kotlin
 data class ArchetypePerformance(
@@ -66,10 +98,10 @@ Keyed by (segment, productType, channel, archetype). Fed back as
 `PlanRequest.segmentPerformance` (existing slot).
 
 Rules:
-- **Minimum samples:** rows with `journeys < 30` are flagged `insufficientEvidence`
-  and excluded from exploitation (§4) — they may still inform the prompt as
-  "early signal", clearly labeled.
-- **Recency weighting:** exponential decay (half-life 45 days default, configurable)
+- **Minimum samples:** rows with `journeys < config.minSamples` are flagged
+  `insufficientEvidence` and excluded from exploitation (§4) — they may still
+  inform the prompt as "early signal", clearly labeled.
+- **Recency weighting:** exponential decay (half-life `config.recencyHalfLifeDays`)
   so old evidence fades.
 - **No PII:** aggregation output contains counts and rates only.
 
@@ -89,9 +121,9 @@ becomes a contextual bandit over (planner archetype × channel):
 data class BanditConfig(
     val epsilon: Double = 0.1,
     val epsilonDecay: Double = 0.999, // per aggregation run
-    val minSamples: Long = 30,
-    val recencyHalfLifeDays: Int = 45,
 )
+// minSamples and recency live in AggregationConfig (§3): the policy only ever
+// sees rows the aggregator already approved, so it can't exploit thin evidence.
 
 interface ArbitrationPolicy {
     fun select(
@@ -152,9 +184,12 @@ extended with `EVIDENCE` vs `RULES` so callers can see what decided.
 
 ## 8. Rollout phases
 
-1. **Log:** `OutcomeStore` interface + runtime append implementation; no behavior change.
-2. **Aggregate:** nightly job → `ArchetypePerformance`; planner prompt shows evidence
-   as labeled context; router unchanged.
+1. **Log (ours: contract + interface):** `JourneyOutcome` data contract +
+   `OutcomeStore` interface. The runtime implements the append store (theirs).
+   No behavior change.
+2. **Aggregate (ours: pure function):** `aggregateOutcomes()` in `commonMain`.
+   The runtime schedules the job and feeds rows back as `segmentPerformance`
+   (theirs). Planner prompt shows evidence as labeled context; router unchanged.
 3. **Bandit:** `ArbitrationPolicy` replaces the static threshold; epsilon-greedy live.
 4. **Arbitrate:** value + levers in the score; governance validation enforced (§6).
 
