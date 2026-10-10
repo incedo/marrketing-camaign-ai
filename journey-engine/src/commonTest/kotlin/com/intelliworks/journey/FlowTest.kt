@@ -129,4 +129,105 @@ class FlowTest {
         val back = Json.decodeFromString(FlowJourney.serializer(), text)
         assertEquals(journey, back)
     }
+
+    private fun personalizeJourney(template: String, outputAttribute: String = "subject_line") =
+        FlowJourney(
+            nodes = mapOf(
+                "start" to FlowNode("start", FlowNodeType.START_TRIGGER),
+                "gen" to FlowNode(
+                    "gen", FlowNodeType.PERSONALIZE_CONTENT, mapOf(
+                        "promptTemplate" to template,
+                        "outputAttribute" to outputAttribute,
+                        "timeoutMs" to "1000",
+                        "fallbackValue" to "Hi",
+                    ),
+                ),
+                "end" to FlowNode("end", FlowNodeType.EXIT_JOURNEY),
+            ),
+            edges = listOf(
+                FlowEdge("start", "gen", "next"),
+                FlowEdge("gen", "end", "next"),
+            ),
+        )
+
+    @Test
+    fun personalizeContentUnknownPlaceholderFails() {
+        val problems = personalizeJourney("Hello {{unknown_attr}}").validate()
+        assertTrue(problems.any { it.contains("unknown_attr") }, problems.joinToString())
+    }
+
+    @Test
+    fun personalizeContentKnownAttributePasses() {
+        val problems = personalizeJourney(
+            "Hello {{segment}}",
+            outputAttribute = "subject_line",
+        ).validate(knownAttributes = setOf("segment"))
+        assertTrue(problems.isEmpty(), problems.joinToString())
+    }
+
+    @Test
+    fun personalizeContentChainedAttributesValidate() {
+        val journey = FlowJourney(
+            nodes = mapOf(
+                "start" to FlowNode("start", FlowNodeType.START_TRIGGER),
+                "gen1" to FlowNode(
+                    "gen1", FlowNodeType.PERSONALIZE_CONTENT, mapOf(
+                        "promptTemplate" to "Deal: {{segment}}",
+                        "outputAttribute" to "subject_line",
+                        "timeoutMs" to "1000",
+                        "fallbackValue" to "Hi",
+                    ),
+                ),
+                "gen2" to FlowNode(
+                    "gen2", FlowNodeType.PERSONALIZE_CONTENT, mapOf(
+                        "promptTemplate" to "Preheader for {{subject_line}}",
+                        "outputAttribute" to "preheader",
+                        "timeoutMs" to "1000",
+                        "fallbackValue" to "Hi",
+                    ),
+                ),
+                "end" to FlowNode("end", FlowNodeType.EXIT_JOURNEY),
+            ),
+            edges = listOf(
+                FlowEdge("start", "gen1", "next"),
+                FlowEdge("gen1", "gen2", "next"),
+                FlowEdge("gen2", "end", "next"),
+            ),
+        )
+        val problems = journey.validate(knownAttributes = setOf("segment"))
+        assertTrue(problems.isEmpty(), problems.joinToString())
+    }
+
+    @Test
+    fun duplicateOutputAttributeFails() {
+        val journey = FlowJourney(
+            nodes = mapOf(
+                "start" to FlowNode("start", FlowNodeType.START_TRIGGER),
+                "gen1" to FlowNode(
+                    "gen1", FlowNodeType.PERSONALIZE_CONTENT, mapOf(
+                        "promptTemplate" to "A",
+                        "outputAttribute" to "subject_line",
+                        "timeoutMs" to "1000",
+                        "fallbackValue" to "Hi",
+                    ),
+                ),
+                "gen2" to FlowNode(
+                    "gen2", FlowNodeType.PERSONALIZE_CONTENT, mapOf(
+                        "promptTemplate" to "B",
+                        "outputAttribute" to "subject_line",
+                        "timeoutMs" to "1000",
+                        "fallbackValue" to "Hi",
+                    ),
+                ),
+                "end" to FlowNode("end", FlowNodeType.EXIT_JOURNEY),
+            ),
+            edges = listOf(
+                FlowEdge("start", "gen1", "next"),
+                FlowEdge("gen1", "gen2", "next"),
+                FlowEdge("gen2", "end", "next"),
+            ),
+        )
+        val problems = journey.validate()
+        assertTrue(problems.any { it.contains("subject_line") && it.contains("both") }, problems.joinToString())
+    }
 }
