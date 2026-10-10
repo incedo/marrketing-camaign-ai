@@ -24,6 +24,10 @@ class LlmFlowJourneyPlanner(
     private val target: LlmTarget,
     private val maxAttempts: Int = 3,
     private val specs: Map<FlowNodeType, FlowNodeSpec> = flowNodeSpecs(),
+    /** When set, every planned journey is published as a [JourneyPlanned] event. */
+    private val eventBus: EventBus? = null,
+    private val journeyIdOf: (PlanRequest) -> String =
+        { r -> "j-${r.profile.id}-${r.nowEpochMillis}" },
 ) : FlowJourneyPlanner {
 
     override suspend fun planFlow(request: PlanRequest): FlowJourney {
@@ -38,10 +42,30 @@ class LlmFlowJourneyPlanner(
             val journey = parseFlow(raw)
             val found = if (journey != null) journey.validate(specs)
             else listOf("Response was not a JSON object with nodes/edges")
-            if (found.isEmpty()) return journey!!
+            if (found.isEmpty()) {
+                publish(request, journey!!, "llm plan accepted on attempt ${attempt + 1}")
+                return journey
+            }
             problems = found
         }
-        return ruleBasedFallback(request)
+        val fallback = ruleBasedFallback(request)
+        publish(request, fallback, "rule-based fallback after $maxAttempts failed attempts")
+        return fallback
+    }
+
+    private suspend fun publish(request: PlanRequest, journey: FlowJourney, reasoning: String) {
+        val bus = eventBus ?: return
+        bus.publish(
+            JourneyPlanned(
+                atEpochMillis = request.nowEpochMillis,
+                journeyId = journeyIdOf(request),
+                journey = journey,
+                goal = request.campaign.goal.takeIf { it.isNotBlank() }?.let {
+                    JourneyGoal(id = "campaign-goal", metric = it)
+                },
+                planReasoning = reasoning,
+            ),
+        )
     }
 
     private fun relevantTypes(c: CampaignConstraints): List<FlowNodeType> {

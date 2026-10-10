@@ -49,7 +49,7 @@ fun flowNodeSpecs(): Map<FlowNodeType, FlowNodeSpec> = listOf(
     spec(AB_SPLIT, "Splits traffic A/B.", requiredParams = setOf("splitPercentA"), slots = setOf("A", "B")),
     spec(RANDOM_SPLIT, "Random split.", requiredParams = setOf("splitPercentA"), slots = setOf("A", "B"), needsSpec = true),
     spec(CONTROL_GROUP, "Holds out a control group.", requiredParams = setOf("holdoutPercent"), slots = setOf("test", "control"), needsSpec = true),
-    spec(ML_DECISION, "Model-driven decision; may call the advice API.", needsSpec = true),
+    spec(ML_DECISION, "Goal arbiter / model-driven decision; may call the advice API.", requiredParams = setOf("goalRef"), needsSpec = true),
     spec(NEXT_BEST_CHANNEL, "Picks the best channel via the advice API."),
     // AI
     spec(SCORE, "Computes a score, e.g. propensity.", needsSpec = true),
@@ -69,7 +69,7 @@ fun flowNodeSpecs(): Map<FlowNodeType, FlowNodeSpec> = listOf(
     spec(ASSIGN_OFFER, "Assigns an offer.", needsSpec = true),
     spec(RESERVE_OFFER, "Reserves an offer.", needsSpec = true),
     spec(GENERATE_COUPON, "Generates a coupon.", needsSpec = true),
-    spec(PERSONALIZE_CONTENT, "Injects generated copy into the step."),
+    spec(PERSONALIZE_CONTENT, "LLM action node: runs promptTemplate, writes outputAttribute.", requiredParams = setOf("promptTemplate", "outputAttribute", "timeoutMs", "fallbackValue")),
     spec(NEXT_BEST_ACTION, "Picks the next best action via the advice API."),
     // Govern
     spec(CONSENT_CHECK, "Checks consent.", slots = setOf("true", "false"), needsSpec = true),
