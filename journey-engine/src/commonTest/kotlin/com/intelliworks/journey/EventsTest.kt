@@ -48,6 +48,7 @@ class EventsTest {
         )
         val events: List<JourneyEvent> = listOf(
             JourneyPlanned(atEpochMillis = now, journeyId = "j1", journey = journey,
+                maker = JourneyMaker("kmp-journey-engine", JourneyMakerKind.AI_PLANNER),
                 goal = JourneyGoal("g1", "purchase", 0.08)),
             NodeEntered(atEpochMillis = now, runId = "r1", nodeId = "send"),
             AdviceRequested(atEpochMillis = now, runId = "r1", journeyId = "j1", nodeId = "send",
@@ -100,6 +101,8 @@ class EventsTest {
         val planned = bus.published.filterIsInstance<JourneyPlanned>().single()
         assertEquals(journey, planned.journey)
         assertEquals("win back dormant customers", planned.goal?.metric)
+        assertEquals("kmp-journey-engine", planned.maker.id)
+        assertEquals(JourneyMakerKind.AI_PLANNER, planned.maker.kind)
         assertTrue(planned.planReasoning.isNotBlank())
     }
 

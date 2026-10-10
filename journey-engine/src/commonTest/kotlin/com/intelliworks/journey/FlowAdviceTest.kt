@@ -221,6 +221,7 @@ class FlowAdviceTest {
                 atEpochMillis = now,
                 journeyId = "j1",
                 journey = personalizeJourney(),
+                maker = JourneyMaker("flow-editor", JourneyMakerKind.HUMAN_EDITOR),
                 goal = JourneyGoal("g1", "purchase"),
             ),
         )

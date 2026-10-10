@@ -21,7 +21,7 @@ Date: 2026-10-10.
 
 | Event | Producer | Consumers | Payload (sketch) |
 |---|---|---|---|
-| `JourneyPlanned` | planner | runtime, warmup | `journey: FlowJourney, goal: JourneyGoal?, planReasoning` |
+| `JourneyPlanned` | planner, editor, import | runtime, warmup | `journey: FlowJourney, maker: JourneyMaker (id/kind — e.g. kmp-journey-engine/AI_PLANNER, flow-editor/HUMAN_EDITOR), goal: JourneyGoal?, planReasoning` |
 | `NodeEntered` | runtime | advice, audit | `runId, nodeId, attributes: Map<String,String>` |
 | `AdviceRequested` | runtime | advice | `runId, nodeId, runEvents (≤20), goal?, tier` |
 | `AdviceResolved` | advice | runtime | `runId, nodeId, recommendation (nodeId | attributeValue), reasoning, servedBy` |

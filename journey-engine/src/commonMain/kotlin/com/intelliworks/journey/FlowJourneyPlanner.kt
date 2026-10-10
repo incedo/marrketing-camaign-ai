@@ -43,23 +43,37 @@ class LlmFlowJourneyPlanner(
             val found = if (journey != null) journey.validate(specs)
             else listOf("Response was not a JSON object with nodes/edges")
             if (found.isEmpty()) {
-                publish(request, journey!!, "llm plan accepted on attempt ${attempt + 1}")
+                publish(
+                    request, journey!!,
+                    "llm plan accepted on attempt ${attempt + 1}",
+                    JourneyMakerKind.AI_PLANNER,
+                )
                 return journey
             }
             problems = found
         }
         val fallback = ruleBasedFallback(request)
-        publish(request, fallback, "rule-based fallback after $maxAttempts failed attempts")
+        publish(
+            request, fallback,
+            "rule-based fallback after $maxAttempts failed attempts",
+            JourneyMakerKind.RULE_ENGINE,
+        )
         return fallback
     }
 
-    private suspend fun publish(request: PlanRequest, journey: FlowJourney, reasoning: String) {
+    private suspend fun publish(
+        request: PlanRequest,
+        journey: FlowJourney,
+        reasoning: String,
+        makerKind: JourneyMakerKind,
+    ) {
         val bus = eventBus ?: return
         bus.publish(
             JourneyPlanned(
                 atEpochMillis = request.nowEpochMillis,
                 journeyId = journeyIdOf(request),
                 journey = journey,
+                maker = JourneyMaker(id = "kmp-journey-engine", kind = makerKind),
                 goal = request.campaign.goal.takeIf { it.isNotBlank() }?.let {
                     JourneyGoal(id = "campaign-goal", metric = it)
                 },

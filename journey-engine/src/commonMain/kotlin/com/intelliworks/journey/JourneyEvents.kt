@@ -42,12 +42,26 @@ data class RunEvent(
     val atEpochMillis: Long,
 )
 
+/** Who made a journey: the planner, the rule engine, Kees' editor, an import... */
+@Serializable
+enum class JourneyMakerKind { AI_PLANNER, RULE_ENGINE, HUMAN_EDITOR, IMPORT }
+
+@Serializable
+data class JourneyMaker(
+    /** e.g. "kmp-journey-engine", "flow-editor". */
+    val id: String,
+    val kind: JourneyMakerKind,
+    val version: String? = null,
+)
+
 @Serializable
 data class JourneyPlanned(
     override val eventId: String = newEventId(),
     override val atEpochMillis: Long,
     val journeyId: String,
     val journey: FlowJourney,
+    /** Provenance: who made this journey. The runtime accepts any maker. */
+    val maker: JourneyMaker,
     val goal: JourneyGoal? = null,
     val planReasoning: String = "",
 ) : JourneyEvent
