@@ -22,7 +22,7 @@ Date: 2026-10-10.
 | Event | Producer | Consumers | Payload (sketch) |
 |---|---|---|---|
 | `JourneyPlanned` | planner, editor, import | runtime, warmup | `journey: FlowJourney, maker: JourneyMaker (id/kind — e.g. kmp-journey-engine/AI_PLANNER, flow-editor/HUMAN_EDITOR), goal: JourneyGoal?, planReasoning` |
-| `NodeEntered` | runtime | advice, audit | `runId, nodeId, attributes: Map<String,String>` |
+| `NodeEntered` | runtime | audit (runtime); gereserveerd voor toekomstig gebruik (bv. cache-invalidering) | `runId, nodeId, attributes: Map<String,String>` |
 | `AdviceRequested` | runtime | advice | `runId, nodeId, runEvents (≤20), goal?, tier` |
 | `AdviceResolved` | advice | runtime | `runId, nodeId, recommendation (nodeId | attributeValue), reasoning, servedBy` |
 | `AttributeWritten` | advice | runtime | `runId, attribute, value` (LLM action output) |
@@ -66,9 +66,8 @@ The runtime's bus implementation (in-memory, Kafka, …) is its own choice.
 
 ### Step 3 — Advice over events
 - **Build:** an `AdviceSubscriber` that listens for `AdviceRequested` and publishes
-  `AdviceResolved`. The existing `TieredAdviceService.advise()` becomes the
-  handler body — no logic rewrite, just an event wrapper. `NodeEntered` updates
-  the warmup cache keys.
+  `AdviceResolved`. (`NodeEntered` stays runtime-only for now — audit and future
+  use, e.g. warmup cache invalidation.)
 - **Runtime contract:** at node execution, publish `AdviceRequested` (with tier)
   and await the matching `AdviceResolved` (correlation by `runId`+`nodeId`);
   on timeout use local fallback — the runtime never blocks on us.
