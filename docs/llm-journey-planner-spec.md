@@ -91,6 +91,36 @@ data class PlannerInput(
 )
 ```
 
+**`PlannerInput` is internal.** The external journey runtime only ever sends raw domain
+facts — it must not know about summaries, pseudonymization or prompts. The public
+contract is:
+
+```kotlin
+/** Public contract — what the external journey runtime sends. */
+@Serializable
+data class PlanRequest(
+    val profile: PersonProfile,
+    val behavior: MeasuredBehavior,      // raw events; the planner summarizes internally
+    val products: List<Product>,
+    val campaign: Campaign,
+    val segmentPerformance: List<ArchetypePerformance> = emptyList(),
+    val nowEpochMillis: Long,
+)
+
+interface JourneyPlanner {
+    suspend fun plan(request: PlanRequest): Journey
+}
+```
+
+`JourneyRouter` implements this interface: summarize behavior → score propensity → pick
+engine → build the internal `PlannerInput` → run the §4 loop. Planner config
+(`LlmClient`, `LlmTarget`, propensity threshold) is constructor-level, never per-request.
+
+> **Serialization gap:** `Journey`, the `JourneyNode` subtypes and `JourneyEdge` are
+> currently not `@Serializable`, but the planned journey must cross a process boundary
+> to the external runtime (JSON over HTTP/queue). Make them serializable with
+> kotlinx polymorphic serialization on the sealed `JourneyNode` interface.
+
 ## 4. The planner loop (runtime)
 
 ```
@@ -186,11 +216,14 @@ shaped for it now so nothing has to be re-cut later.
 - `JourneyOutcome.kt` — `JourneyOutcome`, the executing service's return type (§11.2)
 - `LlmJourneyPlanner.kt` — prompt building, JSON parsing, retry loop, fallback wiring;
   applies pseudonymization when `target == CLOUD`
-- `JourneyRouter.kt` — picks planner vs rule-based engine by propensity threshold (§11.1)
+- `JourneyRouter.kt` — implements `JourneyPlanner` (takes `PlanRequest`); picks planner
+  vs rule-based engine by propensity threshold (§11.1)
 
 **Changed:**
 - `LlmJourneyEngine` stays untouched as the fallback.
 - `PersonProfile` gains `language: String?` (per-profile copy language, §11.4).
+- `Journey`, `JourneyNode` subtypes, `JourneyEdge`: add `@Serializable` (polymorphic) —
+  the planned journey crosses a process boundary to the external runtime.
 
 **Tests (commonTest):** planner loop tests + golden tests (§8).
 
