@@ -121,6 +121,30 @@ engine → build the internal `PlannerInput` → run the §4 loop. Planner confi
 > to the external runtime (JSON over HTTP/queue). Make them serializable with
 > kotlinx polymorphic serialization on the sealed `JourneyNode` interface.
 
+### 3.4 Product is abstract — subscriptions are first-class
+
+"Product" is an abstract term: it covers physical goods, digital goods, services
+**and subscriptions** (media, fitness, …). The `ProductType` enum already abstracts
+this, but the shape is too thin for subscription journeys. Extend:
+
+```kotlin
+enum class BillingPeriod { WEEKLY, MONTHLY, QUARTERLY, YEARLY }
+
+data class SubscriptionDetails(
+    val billingPeriod: BillingPeriod,
+    val trialDays: Int? = null,
+    val pricePerPeriodCents: Long,
+)
+
+// on Product:
+val subscription: SubscriptionDetails? = null, // set when type == SUBSCRIPTION
+```
+
+Type-aware planning: the planner's system prompt must know the product type, because
+subscription journeys use different archetypes (trial→paid conversion, renewal
+reminders, failed-payment recovery, churn win-back) than one-off purchase journeys.
+`ArchetypePerformance` is therefore keyed by (segment, product type), not just segment.
+
 ## 4. The planner loop (runtime)
 
 ```
@@ -222,6 +246,8 @@ shaped for it now so nothing has to be re-cut later.
 **Changed:**
 - `LlmJourneyEngine` stays untouched as the fallback.
 - `PersonProfile` gains `language: String?` (per-profile copy language, §11.4).
+- `Product` gains `subscription: SubscriptionDetails?` (+ `BillingPeriod` enum) for
+  first-class subscriptions (§3.4); `ArchetypePerformance` keyed by (segment, product type).
 - `Journey`, `JourneyNode` subtypes, `JourneyEdge`: add `@Serializable` (polymorphic) —
   the planned journey crosses a process boundary to the external runtime.
 
