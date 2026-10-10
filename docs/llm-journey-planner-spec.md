@@ -274,3 +274,54 @@ shaped for it now so nothing has to be re-cut later.
 4. **Copy language:** per-profile, since many customers are English-speaking. Add
    `language: String?` to `PersonProfile`; effective language =
    `profile.language ?: campaign.constraints.language` (default `"nl"`).
+
+## 12. Runtime advice service (built 2026-10-10)
+
+Separate from planning: while the external runtime **executes** a journey, it asks this
+service "what is the next step for this person, right now?" The answer must be as fast
+as the situation demands — email can take seconds, a website visitor needs milliseconds.
+
+### 12.1 Latency tiers
+
+`AdviceUrgency` decides the strategy, not just the timeout:
+
+- **REALTIME** (website / in-app): serve from precomputed cache; on a cache miss,
+  instant rules. The LLM is **never** on this path — it runs ahead of time via `warmup`.
+  Target: p99 < 300ms.
+- **INTERACTIVE** (push / chat): one LLM attempt with a hard timeout (default 1500ms),
+  rules on timeout or failure.
+- **BACKGROUND** (email / batch): full LLM advice, then cached for later realtime hits.
+
+The trick: the runtime calls `warmup()` (async) on journey entry and on relevant
+events, so by the time a REALTIME request arrives the LLM has usually already answered
+it — the visitor gets LLM-quality advice at cache speed.
+
+### 12.2 Models
+
+- `AdviceRequest`: personId, profile, journeyId, **journey** (serializable graph),
+  currentNodeId, visitedNodeIds, behavior, products, **channel** (where the person is
+  right now), **urgency**, candidates (optional restriction), nowEpochMillis.
+- `AdviceResponse`: recommendedNodeId, confidence 0..1, reasoning, content? (generated
+  copy for the step), servedBy (CACHE | RULES | LLM), latencyMs.
+- `JourneyAdviceService`: `advise()` (synchronous) + `warmup()` (async precompute).
+- `AdviceCache` + `InMemoryAdviceCache` (TTL, default 15 min). Cache key =
+  person + journey + node + visited path.
+
+Rules fallback is deterministic: best product-tag match among candidates (confidence 0.5).
+LLM advice returns JSON `{recommendedId, confidence, reasoning, content?}`; unknown ids
+or parse failures fall back to rules. Cloud targets pseudonymize like the planner (§7).
+
+### 12.3 HTTP contract (runtime hosts this; models map 1:1 to JSON)
+
+```
+POST /v1/advice
+  body: AdviceRequest
+  → 200 AdviceResponse
+
+POST /v1/advice/warmup
+  body: AdviceRequest (urgency ignored, treated as BACKGROUND)
+  → 202 Accepted (precompute runs async; later advise() calls hit the cache)
+```
+
+Error semantics: the service never fails a request — worst case it answers from rules
+with low confidence. `servedBy` tells the runtime what it got.
