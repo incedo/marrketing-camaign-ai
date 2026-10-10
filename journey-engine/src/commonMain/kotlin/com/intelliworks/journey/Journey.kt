@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class Channel { EMAIL, PUSH, SMS, IN_APP }
+enum class Channel { EMAIL, PUSH, SMS, WHATSAPP, IN_APP }
 
 /** A single step in a marketing journey. Serialized polymorphically for the external runtime. */
 @Serializable

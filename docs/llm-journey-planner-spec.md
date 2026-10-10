@@ -325,3 +325,99 @@ POST /v1/advice/warmup
 
 Error semantics: the service never fails a request — worst case it answers from rules
 with low confidence. `servedBy` tells the runtime what it got.
+
+## 13. Runtime node mapping (60 FlowNodeTypes)
+
+The other project (journey runtime / executor) speaks 60 `FlowNodeType`s, 56 with
+runtime behavior. Our module plans in 6 abstract types — deliberately. The LLM only
+ever learns 6 types; a **compiler** lowers the abstract journey to the runtime's
+concrete vocabulary. One versioned mapping, instead of 60 types in every prompt.
+
+### 13.1 Abstract → runtime mapping
+
+| Abstract (planner) | Runtime (FlowNodeType) | Notes |
+|---|---|---|
+| StartNode | START_TRIGGER | |
+| EndNode | EXIT_JOURNEY | outcome → exit reason |
+| WaitOnEventNode | WAIT_UNTIL_EVENT | timeout → on-timeout path |
+| DecisionNode | IF_ELSE | question → condition; ML_DECISION where model-backed |
+| ABTestNode | AB_SPLIT | splitPercentA → split config |
+| MarketingNode(EMAIL) | SEND_EMAIL | content → template/body |
+| MarketingNode(PUSH) | SEND_PUSH | |
+| MarketingNode(SMS) | SEND_SMS | |
+| MarketingNode(WHATSAPP) | SEND_WHATSAPP | Channel.WHATSAPP added 2026-10-10 |
+| MarketingNode(IN_APP) | SEND_IN_APP | |
+
+### 13.2 Where the advice API plugs in
+
+The runtime already has exactly the nodes this service is built for:
+
+- **ML_DECISION / NEXT_BEST_ACTION / NEXT_BEST_CHANNEL** → call `POST /v1/advice`
+  at execution time. Urgency follows the channel: website/IN_APP → REALTIME,
+  push → INTERACTIVE, email → BACKGROUND.
+- **SCORE / RECOMMEND** → can be served by the planner's `propensityScore` /
+  product-pick logic, or by the advice service for richer cases.
+- **NEXT_BEST_CHANNEL** is the runtime-side answer to "which channel?" — the planner
+  should prefer it over hard-coding SEND_* where the runtime supports it.
+- **PERSONALIZE_CONTENT** ← the planner's generated copy lands here.
+
+### 13.3 Govern nodes
+
+CONSENT_CHECK, SUPPRESSION_CHECK, FREQUENCY_CAP, CHANNEL_PREFERENCE,
+LEGAL_EXCLUSION: the runtime enforces these at execution. The planner declares
+intent via `CampaignConstraints` (allowedChannels, etc.); the compiler does not
+need to inject govern nodes unless the runtime team wants them explicit in the plan.
+Open point with the runtime team.
+
+### 13.4 Open
+
+- Which 4 of the 60 node types have no runtime behavior yet (56 implemented)?
+- Field-level requirements per FlowNodeType (needed to build the compiler) —
+  see `flow/.../FlowModel.kt`.
+- Should the compiler live in this module (KMP, shared) or on the runtime side?
+
+## 14. The 60 FlowNodeTypes as primary types (2026-10-10, Kees' call)
+
+Decision: the runtime's 60 `FlowNodeType`s are the primary planning vocabulary —
+no separate abstract layer with a compiler. The 6-type `Journey` model stays for
+now (tests, advice service) but new planning work targets `FlowJourney`.
+
+### 14.1 Model
+
+- `FlowNodeType`: all 60, in 11 `FlowCategory`s (mirrors the runtime's
+  `flow/.../FlowModel.kt`).
+- `FlowNode(id, type, params)`: generic node; type-specific fields live in
+  `params` as strings (e.g. `eventType`, `condition`, `subject`).
+- `FlowEdge(from, to, slot?)`: named outgoing slots (`true`/`false`, `A`/`B`,
+  `event`/`timeout`, …), null = default `next`.
+- `FlowJourney(nodes, edges, startNodeId)` + `validate(specs)`: start must be
+  START_TRIGGER, endpoints exist, slots valid per spec, required params present,
+  reachability. All `@Serializable` for the runtime handoff.
+
+### 14.2 Prompt subset, not the full 60
+
+The model knows all 60; the prompt only carries the relevant subset per campaign:
+journey-control/decide/wait/measure basics, communicate types filtered by
+`allowedChannels`, plus ML_DECISION / NEXT_BEST_ACTION / NEXT_BEST_CHANNEL /
+PERSONALIZE_CONTENT (resolved runtime-side via the advice API, §12). This keeps
+prompts small and invalid output rare.
+
+### 14.3 Spec registry
+
+`FlowNodeSpec` per type: description, requiredParams, slots. Specs I'm confident
+about (START_TRIGGER, EXIT_JOURNEY, IF_ELSE, AB_SPLIT, WAIT*, SEND_*, …) are exact;
+the rest are best-effort and flagged `needsSpec = true` — **confirm params/slots
+against `FlowModel.kt` before relying on them.**
+
+### 14.4 Planner
+
+`LlmFlowJourneyPlanner.planFlow(request)`: same propose → validate → retry loop
+(max 3), rule-based `FlowJourney` fallback (START_TRIGGER → SEND_* →
+WAIT_UNTIL_EVENT → EXIT_JOURNEY). Implements `FlowJourneyPlanner`.
+
+### 14.5 Still open
+
+- Exact params/slots for `needsSpec` types → need `FlowModel.kt`.
+- Which 4 of the 60 have no runtime behavior yet.
+- Migrate the advice service's `AdviceRequest.journey` from `Journey` to `FlowJourney`.
+- Retire or keep the 6-type `Journey` model long-term.
