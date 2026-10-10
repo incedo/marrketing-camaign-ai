@@ -15,4 +15,10 @@ data class JourneyOutcome(
     val nodePath: List<String>,
     val converted: Boolean,
     val atEpochMillis: Long,
+    /** Pseudonymized person reference — never raw PII (learning-loop-spec §2). */
+    val personRef: String? = null,
+    val productType: String? = null,
+    val channel: String? = null,
+    /** Null when unknown; nulls stay neutral in arbitration. */
+    val revenue: Double? = null,
 )

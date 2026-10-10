@@ -32,6 +32,15 @@ data class ArchetypePerformance(
     val segment: String,
     val journeys: Int,
     val conversionRate: Double,
+    val channel: String = "",
+    val productType: String = "",
+    val conversions: Int = 0,
+    val revenueTotal: Double = 0.0,
+    val revenuePerJourney: Double = 0.0,
+    val windowDays: Int = 90,
+    val updatedEpochMillis: Long = 0,
+    /** True when journeys < AggregationConfig.minSamples: exploit must skip this row. */
+    val insufficientEvidence: Boolean = false,
 )
 
 /**
