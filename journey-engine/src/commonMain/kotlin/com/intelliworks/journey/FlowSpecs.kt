@@ -64,7 +64,7 @@ fun flowNodeSpecs(): Map<FlowNodeType, FlowNodeSpec> = listOf(
     spec(WAIT_UNTIL_DATE, "Waits until a date.", requiredParams = setOf("date")),
     spec(WAIT_UNTIL_EVENT, "Waits for an event or a timeout.", requiredParams = setOf("eventType"), slots = setOf("event", "timeout")),
     spec(BEST_SEND_TIME, "Optimizes send time.", needsSpec = true),
-    spec(QUIET_HOURS, "Respects quiet hours.", needsSpec = true),
+    spec(QUIET_HOURS, "Delays sends during quiet hours.", requiredParams = setOf("start", "end"), needsSpec = true),
     // Personalize
     spec(ASSIGN_OFFER, "Assigns an offer.", needsSpec = true),
     spec(RESERVE_OFFER, "Reserves an offer.", needsSpec = true),
@@ -72,9 +72,9 @@ fun flowNodeSpecs(): Map<FlowNodeType, FlowNodeSpec> = listOf(
     spec(PERSONALIZE_CONTENT, "LLM action node: runs promptTemplate, writes outputAttribute.", requiredParams = setOf("promptTemplate", "outputAttribute", "timeoutMs", "fallbackValue")),
     spec(NEXT_BEST_ACTION, "Picks the next best action via the advice API."),
     // Govern
-    spec(CONSENT_CHECK, "Checks consent.", slots = setOf("true", "false"), needsSpec = true),
+    spec(CONSENT_CHECK, "Checks consent for a topic/channel before sending.", requiredParams = setOf("topic"), slots = setOf("true", "false"), needsSpec = true),
     spec(SUPPRESSION_CHECK, "Checks suppression lists.", slots = setOf("true", "false"), needsSpec = true),
-    spec(FREQUENCY_CAP, "Enforces frequency caps.", slots = setOf("true", "false"), needsSpec = true),
+    spec(FREQUENCY_CAP, "Enforces max touches per period.", requiredParams = setOf("maxTouches", "periodDays"), slots = setOf("true", "false"), needsSpec = true),
     spec(CHANNEL_PREFERENCE, "Reads channel preference.", needsSpec = true),
     spec(LEGAL_EXCLUSION, "Applies legal exclusions.", slots = setOf("true", "false"), needsSpec = true),
     spec(INTERACTION_MEMORY, "Reads/writes interaction memory.", needsSpec = true),

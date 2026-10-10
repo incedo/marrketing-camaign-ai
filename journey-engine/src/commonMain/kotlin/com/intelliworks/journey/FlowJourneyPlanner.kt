@@ -99,6 +99,13 @@ class LlmFlowJourneyPlanner(
             FlowNodeType.ML_DECISION, FlowNodeType.NEXT_BEST_ACTION,
             FlowNodeType.NEXT_BEST_CHANNEL, FlowNodeType.PERSONALIZE_CONTENT,
         )
+        // Governance & metering: the planner must be able to place these so the
+        // runtime can enforce consent, suppression, frequency caps, quiet hours.
+        set += listOf(
+            FlowNodeType.CONSENT_CHECK, FlowNodeType.SUPPRESSION_CHECK,
+            FlowNodeType.FREQUENCY_CAP, FlowNodeType.QUIET_HOURS,
+            FlowNodeType.BEST_SEND_TIME, FlowNodeType.CONTROL_GROUP,
+        )
         return set.toList()
     }
 
