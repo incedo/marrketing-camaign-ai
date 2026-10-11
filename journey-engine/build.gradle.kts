@@ -9,7 +9,17 @@ kotlin {
     jvm()
     // Native executable for the Docker image (see Dockerfile):
     // ./gradlew :journey-engine:linkReleaseExecutableLinuxX64
-    linuxX64()
+    // NOTE: the binaries { executable { ... } } block is required — without it
+    // Gradle never creates the link*Executable* tasks (first CI run failed on
+    // exactly this: "task 'linkReleaseExecutableLinuxX64' not found").
+    linuxX64 {
+        binaries {
+            executable {
+                entryPoint = "com.intelliworks.journey.main"
+                baseName = "journey-engine"
+            }
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
