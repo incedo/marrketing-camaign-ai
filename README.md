@@ -99,6 +99,9 @@ in `jvmMain` — it talks to OpenAI over the JDK HttpClient.
 - `docs/ai-decisioning-market-research.md`, `docs/cep-ai-decisioning-research.md` — 20+12 vendors
 - `docs/features-roadmap.md` — what's next, prioritized by differentiator strength
 
+`examples/` holds three realistic journeys as serialized JSON (win-back, welcome,
+abandoned cart) — the same output the Docker image prints.
+
 ## Status
 
 Working code, 56/56 tests green. Planner differentiator (propose→validate→retry) and the

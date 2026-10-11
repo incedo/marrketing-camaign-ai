@@ -1,0 +1,120 @@
+{
+    "nodes": {
+        "start": {
+            "id": "start",
+            "type": "START_TRIGGER",
+            "params": {
+                "eventType": "signed_up"
+            }
+        },
+        "consent": {
+            "id": "consent",
+            "type": "CONSENT_CHECK",
+            "params": {
+                "topic": "newsletter"
+            }
+        },
+        "quiet": {
+            "id": "quiet",
+            "type": "QUIET_HOURS",
+            "params": {
+                "start": "22:00",
+                "end": "08:00"
+            }
+        },
+        "welcome_copy": {
+            "id": "welcome_copy",
+            "type": "PERSONALIZE_CONTENT",
+            "params": {
+                "promptTemplate": "Schrijf een warme welkomsttekst voor {{firstName}} in het {{language}}. Max 3 zinnen.",
+                "outputAttribute": "welcomeText",
+                "timeoutMs": "1500",
+                "fallbackValue": "Welkom bij ons!"
+            }
+        },
+        "email": {
+            "id": "email",
+            "type": "SEND_EMAIL",
+            "params": {
+                "templateId": "welcome_v1"
+            }
+        },
+        "app_open": {
+            "id": "app_open",
+            "type": "WAIT_UNTIL_EVENT",
+            "params": {
+                "eventType": "app_opened"
+            }
+        },
+        "onboarded": {
+            "id": "onboarded",
+            "type": "IF_ELSE",
+            "params": {
+                "condition": "profile.onboarding_complete"
+            }
+        },
+        "segment": {
+            "id": "segment",
+            "type": "ADD_TO_SEGMENT",
+            "params": {
+                "segmentId": "onboarded"
+            }
+        },
+        "exit": {
+            "id": "exit",
+            "type": "EXIT_JOURNEY"
+        }
+    },
+    "edges": [
+        {
+            "from": "start",
+            "to": "consent"
+        },
+        {
+            "from": "consent",
+            "to": "quiet",
+            "slot": "true"
+        },
+        {
+            "from": "consent",
+            "to": "exit",
+            "slot": "false"
+        },
+        {
+            "from": "quiet",
+            "to": "welcome_copy"
+        },
+        {
+            "from": "welcome_copy",
+            "to": "email"
+        },
+        {
+            "from": "email",
+            "to": "app_open"
+        },
+        {
+            "from": "app_open",
+            "to": "onboarded",
+            "slot": "event"
+        },
+        {
+            "from": "app_open",
+            "to": "exit",
+            "slot": "timeout"
+        },
+        {
+            "from": "onboarded",
+            "to": "segment",
+            "slot": "true"
+        },
+        {
+            "from": "onboarded",
+            "to": "exit",
+            "slot": "false"
+        },
+        {
+            "from": "segment",
+            "to": "exit"
+        }
+    ]
+}

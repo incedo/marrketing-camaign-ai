@@ -7,6 +7,9 @@ kotlin {
     // Server-side only for now; add android(), iosX64(), etc. later without
     // touching commonMain.
     jvm()
+    // Native executable for the Docker image (see Dockerfile):
+    // ./gradlew :journey-engine:linkReleaseExecutableLinuxX64
+    linuxX64()
 
     sourceSets {
         val commonMain by getting {

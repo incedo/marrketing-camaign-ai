@@ -1,0 +1,120 @@
+{
+    "nodes": {
+        "start": {
+            "id": "start",
+            "type": "START_TRIGGER",
+            "params": {
+                "eventType": "cart_abandoned"
+            }
+        },
+        "besttime": {
+            "id": "besttime",
+            "type": "BEST_SEND_TIME"
+        },
+        "freqcap": {
+            "id": "freqcap",
+            "type": "FREQUENCY_CAP",
+            "params": {
+                "maxTouches": "2",
+                "periodDays": "3"
+            }
+        },
+        "coupon": {
+            "id": "coupon",
+            "type": "GENERATE_COUPON",
+            "params": {
+                "discountPercent": "10",
+                "expiresHours": "48"
+            }
+        },
+        "cart_copy": {
+            "id": "cart_copy",
+            "type": "PERSONALIZE_CONTENT",
+            "params": {
+                "promptTemplate": "Vat de winkelwagen van {{firstName}} samen: {{cartSummary}}. Max 2 zinnen, in het {{language}}.",
+                "outputAttribute": "cartText",
+                "timeoutMs": "1500",
+                "fallbackValue": "Je winkelwagen wacht op je."
+            }
+        },
+        "whatsapp": {
+            "id": "whatsapp",
+            "type": "SEND_WHATSAPP",
+            "params": {
+                "template": "cart_reminder"
+            }
+        },
+        "wait24": {
+            "id": "wait24",
+            "type": "WAIT",
+            "params": {
+                "durationHours": "24"
+            }
+        },
+        "purchased": {
+            "id": "purchased",
+            "type": "CONVERSION_CHECK"
+        },
+        "profile": {
+            "id": "profile",
+            "type": "UPDATE_PROFILE",
+            "params": {
+                "lastCartReminder": "sent"
+            }
+        },
+        "exit": {
+            "id": "exit",
+            "type": "EXIT_JOURNEY"
+        }
+    },
+    "edges": [
+        {
+            "from": "start",
+            "to": "besttime"
+        },
+        {
+            "from": "besttime",
+            "to": "freqcap"
+        },
+        {
+            "from": "freqcap",
+            "to": "coupon",
+            "slot": "true"
+        },
+        {
+            "from": "freqcap",
+            "to": "exit",
+            "slot": "false"
+        },
+        {
+            "from": "coupon",
+            "to": "cart_copy"
+        },
+        {
+            "from": "cart_copy",
+            "to": "whatsapp"
+        },
+        {
+            "from": "whatsapp",
+            "to": "wait24"
+        },
+        {
+            "from": "wait24",
+            "to": "purchased"
+        },
+        {
+            "from": "purchased",
+            "to": "profile",
+            "slot": "true"
+        },
+        {
+            "from": "purchased",
+            "to": "exit",
+            "slot": "false"
+        },
+        {
+            "from": "profile",
+            "to": "exit"
+        }
+    ]
+}

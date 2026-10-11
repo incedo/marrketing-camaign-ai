@@ -1,0 +1,155 @@
+{
+    "nodes": {
+        "start": {
+            "id": "start",
+            "type": "START_TRIGGER",
+            "params": {
+                "eventType": "segment_entered",
+                "segment": "dormant_90d"
+            }
+        },
+        "consent": {
+            "id": "consent",
+            "type": "CONSENT_CHECK",
+            "params": {
+                "topic": "marketing"
+            }
+        },
+        "freqcap": {
+            "id": "freqcap",
+            "type": "FREQUENCY_CAP",
+            "params": {
+                "maxTouches": "3",
+                "periodDays": "7"
+            }
+        },
+        "subject": {
+            "id": "subject",
+            "type": "PERSONALIZE_CONTENT",
+            "params": {
+                "promptTemplate": "Schrijf een korte onderwerpregel voor {{firstName}}, 90 dagen inactief, in het {{language}}. Max 50 tekens.",
+                "outputAttribute": "subjectLine",
+                "timeoutMs": "1500",
+                "fallbackValue": "We missen je — kom terug met 10% korting"
+            }
+        },
+        "email": {
+            "id": "email",
+            "type": "SEND_EMAIL",
+            "params": {
+                "subject": "{{subjectLine}}",
+                "templateId": "winback_v3"
+            }
+        },
+        "wait72": {
+            "id": "wait72",
+            "type": "WAIT",
+            "params": {
+                "durationHours": "72"
+            }
+        },
+        "opened": {
+            "id": "opened",
+            "type": "WAIT_UNTIL_EVENT",
+            "params": {
+                "eventType": "email_opened"
+            }
+        },
+        "decide": {
+            "id": "decide",
+            "type": "ML_DECISION",
+            "params": {
+                "goalRef": "purchase"
+            }
+        },
+        "channel": {
+            "id": "channel",
+            "type": "NEXT_BEST_CHANNEL"
+        },
+        "whatsapp": {
+            "id": "whatsapp",
+            "type": "SEND_WHATSAPP",
+            "params": {
+                "template": "winback_nudge"
+            }
+        },
+        "converted": {
+            "id": "converted",
+            "type": "CONVERSION_CHECK"
+        },
+        "exit": {
+            "id": "exit",
+            "type": "EXIT_JOURNEY"
+        }
+    },
+    "edges": [
+        {
+            "from": "start",
+            "to": "consent"
+        },
+        {
+            "from": "consent",
+            "to": "freqcap",
+            "slot": "true"
+        },
+        {
+            "from": "consent",
+            "to": "exit",
+            "slot": "false"
+        },
+        {
+            "from": "freqcap",
+            "to": "subject",
+            "slot": "true"
+        },
+        {
+            "from": "freqcap",
+            "to": "exit",
+            "slot": "false"
+        },
+        {
+            "from": "subject",
+            "to": "email"
+        },
+        {
+            "from": "email",
+            "to": "wait72"
+        },
+        {
+            "from": "wait72",
+            "to": "opened"
+        },
+        {
+            "from": "opened",
+            "to": "decide",
+            "slot": "event"
+        },
+        {
+            "from": "opened",
+            "to": "channel",
+            "slot": "timeout"
+        },
+        {
+            "from": "decide",
+            "to": "converted"
+        },
+        {
+            "from": "channel",
+            "to": "whatsapp"
+        },
+        {
+            "from": "whatsapp",
+            "to": "converted"
+        },
+        {
+            "from": "converted",
+            "to": "exit",
+            "slot": "true"
+        },
+        {
+            "from": "converted",
+            "to": "exit",
+            "slot": "false"
+        }
+    ]
+}
