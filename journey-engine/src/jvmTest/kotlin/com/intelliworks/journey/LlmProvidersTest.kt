@@ -103,6 +103,28 @@ class LlmProvidersTest {
     }
 
     @Test
+    fun freeProvidersHitTheirOwnEndpoints() = runTest {
+        data class Case(val make: (HttpPost) -> LlmClient, val expectedUrl: String, val name: String)
+
+        val cases = listOf(
+            Case({ OpenRouterLlmClient("k", httpPost = it) }, "https://openrouter.ai/api/v1/chat/completions", "openrouter"),
+            Case({ GroqLlmClient("k", httpPost = it) }, "https://api.groq.com/openai/v1/chat/completions", "groq"),
+            Case({ CerebrasLlmClient("k", httpPost = it) }, "https://api.cerebras.ai/v1/chat/completions", "cerebras"),
+            Case({ GeminiLlmClient("k", httpPost = it) }, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini"),
+            Case({ MistralLlmClient("k", httpPost = it) }, "https://api.mistral.ai/v1/chat/completions", "mistral"),
+            Case({ NvidiaLlmClient("k", httpPost = it) }, "https://integrate.api.nvidia.com/v1/chat/completions", "nvidia"),
+        )
+        for ((make, expectedUrl, name) in cases) {
+            val probe = FakeTransport(openAiResponse("ok"))
+            val client = make(probe)
+            assertEquals("ok", client.complete("hi"), name)
+            val req = probe.seen.single()
+            assertEquals(expectedUrl, req.url, name)
+            assertEquals("Bearer k", req.headers["Authorization"], name)
+        }
+    }
+
+    @Test
     fun errorStatusThrows() = runTest {
         val fake = FakeTransport("""{"error":"nope"}""", statusCode = 401)
         val client = MetaLlmClient(apiKey = "bad", httpPost = fake)
@@ -120,6 +142,12 @@ class LlmProvidersTest {
         assertIs<AnthropicLlmClient>(llmClientFor("claude", apiKey = "k"))
         assertIs<AnthropicLlmClient>(llmClientFor("anthropic", apiKey = "k"))
         assertIs<GrokLlmClient>(llmClientFor("grok", apiKey = "k"))
+        assertIs<OpenRouterLlmClient>(llmClientFor("openrouter", apiKey = "k"))
+        assertIs<GroqLlmClient>(llmClientFor("groq", apiKey = "k"))
+        assertIs<CerebrasLlmClient>(llmClientFor("cerebras", apiKey = "k"))
+        assertIs<GeminiLlmClient>(llmClientFor("gemini", apiKey = "k"))
+        assertIs<MistralLlmClient>(llmClientFor("mistral", apiKey = "k"))
+        assertIs<NvidiaLlmClient>(llmClientFor("nvidia", apiKey = "k"))
     }
 
     @Test

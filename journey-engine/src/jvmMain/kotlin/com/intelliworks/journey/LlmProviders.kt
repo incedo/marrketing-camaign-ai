@@ -153,6 +153,62 @@ class GrokLlmClient(
     httpPost: HttpPost = jdkHttpPost(),
 ) : OpenAiCompatLlmClient(baseUrl, apiKey, model, "grok", httpPost = httpPost)
 
+// ---------------------------------------------------------------------------
+// Free-tier providers (all OpenAI-compatible). See docs/free-llm-providers.md
+// for signup instructions per provider.
+// ---------------------------------------------------------------------------
+
+/** OpenRouter (https://openrouter.ai/api/v1) — aggregates `:free` models. */
+class OpenRouterLlmClient(
+    apiKey: String,
+    model: String = "meta-llama/llama-3.3-70b-instruct:free",
+    baseUrl: String = "https://openrouter.ai/api/v1",
+    httpPost: HttpPost = jdkHttpPost(),
+) : OpenAiCompatLlmClient(baseUrl, apiKey, model, "openrouter", httpPost = httpPost)
+
+/** Groq (https://api.groq.com/openai/v1) — generous free tier, very fast. */
+class GroqLlmClient(
+    apiKey: String,
+    model: String = "llama-3.3-70b-versatile",
+    baseUrl: String = "https://api.groq.com/openai/v1",
+    httpPost: HttpPost = jdkHttpPost(),
+) : OpenAiCompatLlmClient(baseUrl, apiKey, model, "groq", httpPost = httpPost)
+
+/** Cerebras (https://api.cerebras.ai/v1) — ~1M tokens/day free, very fast. */
+class CerebrasLlmClient(
+    apiKey: String,
+    model: String = "llama-3.3-70b",
+    baseUrl: String = "https://api.cerebras.ai/v1",
+    httpPost: HttpPost = jdkHttpPost(),
+) : OpenAiCompatLlmClient(baseUrl, apiKey, model, "cerebras", httpPost = httpPost)
+
+/**
+ * Google AI Studio (Gemini) via its OpenAI-compatible endpoint.
+ * Note: free-tier prompts may be used to improve Google's products.
+ */
+class GeminiLlmClient(
+    apiKey: String,
+    model: String = "gemini-2.0-flash",
+    baseUrl: String = "https://generativelanguage.googleapis.com/v1beta/openai",
+    httpPost: HttpPost = jdkHttpPost(),
+) : OpenAiCompatLlmClient(baseUrl, apiKey, model, "gemini", httpPost = httpPost)
+
+/** Mistral La Plateforme (https://api.mistral.ai/v1) — free Experiment tier. */
+class MistralLlmClient(
+    apiKey: String,
+    model: String = "mistral-small-latest",
+    baseUrl: String = "https://api.mistral.ai/v1",
+    httpPost: HttpPost = jdkHttpPost(),
+) : OpenAiCompatLlmClient(baseUrl, apiKey, model, "mistral", httpPost = httpPost)
+
+/** NVIDIA NIM (https://integrate.api.nvidia.com/v1) — ~1000 req/day/model free. */
+class NvidiaLlmClient(
+    apiKey: String,
+    model: String = "meta/llama-3.1-70b-instruct",
+    baseUrl: String = "https://integrate.api.nvidia.com/v1",
+    httpPost: HttpPost = jdkHttpPost(),
+) : OpenAiCompatLlmClient(baseUrl, apiKey, model, "nvidia", httpPost = httpPost)
+
 /**
  * Anthropic Claude (https://api.anthropic.com/v1/messages) — its own wire format.
  */
@@ -235,8 +291,15 @@ fun llmClientFor(provider: String, apiKey: String? = null, model: String? = null
         "openai" -> OpenAiLlmClient(requireKey(apiKey, "openai"), model ?: "gpt-4o-mini")
         "claude", "anthropic" -> AnthropicLlmClient(requireKey(apiKey, "claude"), model ?: "claude-sonnet-4-5")
         "grok", "xai" -> GrokLlmClient(requireKey(apiKey, "grok"), model ?: "grok-3-mini")
+        // Free-tier providers (see docs/free-llm-providers.md for signup)
+        "openrouter" -> OpenRouterLlmClient(requireKey(apiKey, "openrouter"), model ?: "meta-llama/llama-3.3-70b-instruct:free")
+        "groq" -> GroqLlmClient(requireKey(apiKey, "groq"), model ?: "llama-3.3-70b-versatile")
+        "cerebras" -> CerebrasLlmClient(requireKey(apiKey, "cerebras"), model ?: "llama-3.3-70b")
+        "gemini", "google" -> GeminiLlmClient(requireKey(apiKey, "gemini"), model ?: "gemini-2.0-flash")
+        "mistral" -> MistralLlmClient(requireKey(apiKey, "mistral"), model ?: "mistral-small-latest")
+        "nvidia", "nim" -> NvidiaLlmClient(requireKey(apiKey, "nvidia"), model ?: "meta/llama-3.1-70b-instruct")
         else -> throw IllegalArgumentException(
-            "Unknown LLM provider '$provider' (expected meta|ollama|lmstudio|openai|claude|grok)",
+            "Unknown LLM provider '$provider' (expected meta|ollama|lmstudio|openai|claude|grok|openrouter|groq|cerebras|gemini|mistral|nvidia)",
         )
     }
 

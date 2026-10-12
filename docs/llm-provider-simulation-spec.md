@@ -50,6 +50,12 @@ token/kosten-budget per latency tier uit de roadmap.
 | `openai` | `OpenAiLlmClient` | Bestaat al (`jvmMain`, JDK HttpClient) |
 | `claude` | `AnthropicLlmClient` | Anthropic Messages API |
 | `grok` | `GrokLlmClient` | xAI API (OpenAI-compatibel) |
+| `openrouter` | `OpenRouterLlmClient` | `:free`-modellen, OpenAI-compatibel — zie `docs/free-llm-providers.md` |
+| `groq` | `GroqLlmClient` | Royale gratis tier, OpenAI-compatibel — zie `docs/free-llm-providers.md` |
+| `cerebras` | `CerebrasLlmClient` | ~1M tokens/dag gratis — zie `docs/free-llm-providers.md` |
+| `gemini` | `GeminiLlmClient` | Google AI Studio, OpenAI-compatibel endpoint — zie `docs/free-llm-providers.md` |
+| `mistral` | `MistralLlmClient` | Gratis Experiment-tier — zie `docs/free-llm-providers.md` |
+| `nvidia` | `NvidiaLlmClient` | NVIDIA NIM, ~1000 req/dag/model gratis — zie `docs/free-llm-providers.md` |
 
 Eén factory, geen vertakkingen in de engine:
 
