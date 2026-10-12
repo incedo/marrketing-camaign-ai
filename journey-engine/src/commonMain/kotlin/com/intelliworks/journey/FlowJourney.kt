@@ -101,7 +101,8 @@ data class FlowJourney(
         for ((id, node) in nodes) {
             if (node.type != FlowNodeType.PERSONALIZE_CONTENT) continue
             val attr = node.params["outputAttribute"]?.takeIf { it.isNotBlank() } ?: continue
-            val prev = writerOf.putIfAbsent(attr, id)
+            val prev = writerOf[attr]
+            if (prev == null) writerOf[attr] = id
             if (prev != null) problems += "Attribute '$attr' is written by both '$prev' and '$id'"
         }
 
