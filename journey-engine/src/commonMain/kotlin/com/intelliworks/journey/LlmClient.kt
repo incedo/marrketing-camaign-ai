@@ -1,8 +1,21 @@
 package com.intelliworks.journey
 
+import kotlinx.serialization.Serializable
+
+/** Token usage of one LLM call, when the provider reports it. */
+@Serializable
+data class LlmUsage(val promptTokens: Int, val completionTokens: Int)
+
 /** Minimal LLM abstraction. The engine only depends on this. */
 interface LlmClient {
     suspend fun complete(prompt: String, system: String? = null): String
+
+    /**
+     * Same as [complete], plus token usage when the provider reports it.
+     * Defaults to [complete] with unknown usage; providers override this.
+     */
+    suspend fun completeWithUsage(prompt: String, system: String? = null): Pair<String, LlmUsage?> =
+        complete(prompt, system) to null
 }
 
 /**
