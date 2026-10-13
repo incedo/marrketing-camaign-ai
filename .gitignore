@@ -1,0 +1,13 @@
+# Local secrets — never commit these
+.env
+*.env.local
+
+# Gradle / build outputs
+.gradle/
+build/
+journey-engine/build/
+
+# IDE and OS noise
+.idea/
+*.iml
+.DS_Store

@@ -36,3 +36,16 @@ kotlin {
         }
     }
 }
+
+// Local runner for the real-LLM planner (see RunPlanner.kt):
+//   ./gradlew :journey-engine:runPlanner
+// or via ./scripts/run-planner.sh (loads a gitignored .env file).
+// Reads LLM_PROVIDER / LLM_API_KEY / LLM_MODEL from the environment.
+tasks.register<JavaExec>("runPlanner") {
+    group = "application"
+    description = "Plans a demo journey with a real LLM (API key via environment, never committed)."
+    val jvmTarget = kotlin.targets.getByName<org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget>("jvm")
+    val jvmMain = jvmTarget.compilations.getByName("main")
+    mainClass.set("com.intelliworks.journey.RunPlannerKt")
+    classpath = jvmMain.runtimeDependencyFiles + jvmMain.output.allOutputs
+}
